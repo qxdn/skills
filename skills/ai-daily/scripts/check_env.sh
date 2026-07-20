@@ -12,6 +12,9 @@
 #
 # requests 缺失时会自动安装到上面选定的环境中。
 #
+# 注意：Linux/Docker 环境需要 python 自带 venv 支持（Debian/Ubuntu 为 python3-venv 包，
+# 未安装时本脚本会给出对应的安装命令提示）。
+#
 # 使用方式：
 #   bash skills/ai-daily/scripts/check_env.sh
 #
@@ -31,6 +34,29 @@ venv_python() {
     else
         echo "$VENV_DIR/bin/python"
     fi
+}
+
+# 根据 /etc/os-release 输出对应发行版的 venv 支持安装命令（仅提示，不自动执行）
+print_venv_install_hint() {
+    local os_id=""
+    if [ -f /etc/os-release ]; then
+        # /etc/os-release 是 KEY=value 格式，可以直接 source 取 $ID
+        os_id=$(. /etc/os-release && echo "$ID")
+    fi
+    case "$os_id" in
+        debian|ubuntu)
+            echo "[提示] Debian/Ubuntu 的 venv 是独立包，请执行: apt update && apt install -y python3-venv" >&2
+            ;;
+        alpine)
+            echo "[提示] Alpine 请安装 python3 完整组件: apk add python3 py3-pip" >&2
+            ;;
+        fedora|rhel|centos)
+            echo "[提示] RHEL 系请执行: dnf install -y python3" >&2
+            ;;
+        *)
+            echo "[提示] 请为当前 python 安装 venv/pip 支持后重试" >&2
+            ;;
+    esac
 }
 
 # 检查指定 python 是否能导入 requests；不能则自动安装并二次验证
@@ -76,12 +102,25 @@ else
         echo "[错误] 未找到 python，请先安装 Python 3.8+" >&2
         exit 1
     fi
+    # 预检 ensurepip：Debian/Ubuntu 裸镜像未装 python3-venv 时 venv 必然创建失败，
+    # 提前检测并给出对应的安装命令，省去用户排查
+    if ! "$BASE_PY" -c "import ensurepip" >/dev/null 2>&1; then
+        echo "[错误] 当前 python 缺少 venv/pip 支持（ensurepip 不可用），无法创建虚拟环境" >&2
+        print_venv_install_hint
+        exit 1
+    fi
     echo "[创建] 未检测到虚拟环境，正在创建 skill 专用虚拟环境: $VENV_DIR"
     if ! "$BASE_PY" -m venv "$VENV_DIR"; then
         echo "[错误] 虚拟环境创建失败，请检查 python 的 venv 模块是否可用" >&2
+        print_venv_install_hint
         exit 1
     fi
     PY="$(venv_python)"
+    # venv 创建成功但 pip 缺失的兜底（极简镜像可能出现）
+    if ! "$PY" -m pip --version >/dev/null 2>&1; then
+        echo "[错误] 虚拟环境已创建但 pip 不可用，请删除 $VENV_DIR 后重试，或手动执行: \"$PY\" -m ensurepip" >&2
+        exit 1
+    fi
     echo "[OK] 虚拟环境创建完成"
 fi
 
