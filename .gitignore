@@ -2,3 +2,6 @@
 .claude
 .venv/
 __pycache__/
+.worktrees/
+.vscode/
+.last_request_ts
