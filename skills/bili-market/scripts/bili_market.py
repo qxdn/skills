@@ -211,21 +211,15 @@ async def cmd_history(client, args):
         "sku_id": args.sku_id,
         "nums": args.nums,
         "page": args.page,
-        "sort_by": "created_at",
-        "sort_order": "desc",
+        "is_sold": "true" if args.sold else None,
+        "is_blacklisted": "true" if args.blacklist else None,
+        "sort_by": args.sort_by,
+        "sort_order": args.sort_order,
     }
     payload = await api_get(client, "/market/searchItemHistory", params)
     data = payload.get("data")
     if not data:
         print(f"sku_id={args.sku_id} 暂无历史价格记录。")
-        return
-    # is_sold 服务端过滤语义与直觉相反，改为本地过滤，结果更可控
-    if args.sold:
-        data = [it for it in data if it.get("isSold")]
-    elif args.valid:
-        data = [it for it in data if not it.get("isSold")]
-    if not data:
-        print("当前页没有符合筛选条件的记录，可换一页试试（--page）。")
         return
     rows = []
     for it in data:
@@ -282,14 +276,14 @@ def main():
     p.add_argument("sku_id", type=int, help="商品 sku_id")
     p.set_defaults(func=cmd_detail)
 
-    # TODO: 增加排序方式
     p = sub.add_parser("history", help="查看商品历史价格/在售记录")
     p.add_argument("sku_id", type=int, help="商品 sku_id")
     p.add_argument("--nums", type=int, default=20, help="每页条数（默认 20，上限 100）")
     p.add_argument("--page", type=int, default=1, help="页码（默认 1）")
-    g = p.add_mutually_exclusive_group()
-    g.add_argument("--sold", action="store_true", help="只看已售出的成交记录")
-    g.add_argument("--valid", action="store_true", help="只看当前在售的")
+    p.add_argument("--sold", action="store_true", help="只看在售")
+    p.add_argument("--blacklist", action="store_true", help="只看当前在售的")
+    p.add_argument("--sort_by", choices=["created_at", "price"], default="created_at", help="排序字段（默认 created_at）")
+    p.add_argument("--sort_order", choices=["asc", "desc"], default="desc", help="排序顺序（默认 desc）")
     p.set_defaults(func=cmd_history)
 
     args = parser.parse_args()
