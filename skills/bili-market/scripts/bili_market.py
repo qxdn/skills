@@ -35,6 +35,8 @@ ITEM_PAGE = (
     "https://mall.bilibili.com/neul-next/index.html"
     "?page=magic-market_detail&noTitleBar=1&itemsId={}&from=market_index"
 )
+# 数据站商品历史页（hash 路由，按 sku_id 访问）
+SKU_PAGE = "https://bili-market.s-wg.net/#/history/{}"
 
 class PayLoad(TypedDict):
     '''
@@ -118,7 +120,6 @@ def esc(text):
     """转义 Markdown 表格单元格中的竖线，避免破坏表格结构。"""
     return str(text).replace("|", "\\|").replace("\n", " ")
 
-# TODO: 输出不是id而是详情地址
 def print_table(headers, rows):
     print("| " + " | ".join(headers) + " |")
     print("|" + "|".join(["---"] * len(headers)) + "|")
@@ -141,7 +142,10 @@ async def cmd_new(client, args):
         print(f"**{date} 市集上新（共 {total} 件，显示前 {len(items)} 件）**\n")
     else:
         print(f"**{date} 市集上新（共 {total} 件）**\n")
-    print_table(["sku_id", "名称"], [(sku, name.strip()) for sku, name in items])
+    print_table(
+        ["sku_id", "名称", "链接"],
+        [(sku, name.strip(), SKU_PAGE.format(sku)) for sku, name in items],
+    )
 
 
 def _print_sku_table(items, empty_hint):
@@ -153,10 +157,11 @@ def _print_sku_table(items, empty_hint):
             it.get("name", "").strip(),
             it.get("sku_id", ""),
             "✅" if it.get("is_valid") else "❌",
+            SKU_PAGE.format(it.get("sku_id", "")),
         )
         for it in items
     ]
-    print_table(["名称", "sku_id", "在售"], rows)
+    print_table(["名称", "sku_id", "在售", "链接"], rows)
 
 
 async def cmd_search(client, args):
@@ -202,6 +207,7 @@ async def cmd_detail(client, args):
             ("上架时间", data.get("createTime", "未知")),
             ("图片", data.get("img", "")),
             ("市集页面", ITEM_PAGE.format(data.get("itemsId", ""))),
+            ("数据站页面", SKU_PAGE.format(data.get("skuId", args.sku_id))),
         ],
     )
 
