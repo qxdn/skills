@@ -69,7 +69,7 @@ python scripts/bili_market.py search 初音 --exclude 毛绒 --nums 10 --valid
 python scripts/bili_market.py detail <sku_id>
 ```
 
-输出名称、市场价、图片直链、市集页面链接。
+输出名称、市场价、图片直链、数据站页面链接。
 
 ### 4. 历史价格 / 在售记录
 

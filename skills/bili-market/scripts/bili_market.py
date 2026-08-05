@@ -206,7 +206,6 @@ async def cmd_detail(client, args):
             ("市场价", f"{data.get('marketPrice', '?')} 元"),
             ("上架时间", data.get("createTime", "未知")),
             ("图片", data.get("img", "")),
-            ("市集页面", ITEM_PAGE.format(data.get("itemsId", ""))),
             ("数据站页面", SKU_PAGE.format(data.get("skuId", args.sku_id))),
         ],
     )
